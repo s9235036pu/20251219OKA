@@ -1,1 +1,972 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  MapPin, Navigation, Coffee, ShoppingBag, Car, Info, Phone, Calendar, 
+  Trash2, Sun, CloudRain, Wind, ArrowRight, Utensils, 
+  BedDouble, Plane, X, Users, Calculator, Wallet, Link as LinkIcon, 
+  AlertTriangle, CheckCircle2, Ticket, ChevronDown, ChevronUp, Printer, Globe,
+  Copy, Instagram, ExternalLink, CloudLightning, Clock, Umbrella, Heart
+} from 'lucide-react';
+
+// --- Configuration ---
+
+const tripConfig = {
+  title: "沖繩冬日之旅 2025",
+  dates: "2025.12.19 - 12.22",
+  travelers: 3,
+};
+
+const weatherData = {
+  "12/19": { temp: "21°C", icon: <Sun size={20} />, desc: "晴時多雲", color: "bg-gradient-to-br from-orange-400 to-amber-200 text-white" },
+  "12/20": { temp: "20°C", icon: <Wind size={20} />, desc: "微風涼爽", color: "bg-gradient-to-br from-blue-400 to-cyan-200 text-white" },
+  "12/21": { temp: "19°C", icon: <CloudRain size={20} />, desc: "偶有陣雨", color: "bg-gradient-to-br from-slate-400 to-slate-200 text-white" },
+  "12/22": { temp: "21°C", icon: <Sun size={20} />, desc: "晴朗", color: "bg-gradient-to-br from-orange-400 to-amber-200 text-white" },
+};
+
+// --- Helper for Clipboard ---
+const copyToClipboard = (text) => {
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.style.position = "fixed"; // Prevent scrolling to bottom
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  try {
+    document.execCommand("copy");
+  } catch (err) {
+    console.error("Copy failed", err);
+  }
+  document.body.removeChild(textarea);
+};
+
+// --- Real-time Flight Logic ---
+
+const flights = [
+  {
+    code: "MM930",
+    route: "TPE -> OKA",
+    dep: "2025-12-19T18:20:00",
+    arr: "2025-12-19T20:50:00",
+    terminal: "T1",
+    gate: "B1R",
+    status: "scheduled"
+  },
+  {
+    code: "MM921",
+    route: "OKA -> TPE",
+    dep: "2025-12-22T08:15:00",
+    arr: "2025-12-22T08:55:00",
+    terminal: "Intl",
+    gate: "--",
+    status: "scheduled"
+  }
+];
+
+const FlightWidget = ({ flight }) => {
+  const [status, setStatus] = useState("準時");
+  const [color, setColor] = useState("text-emerald-600 bg-emerald-50");
+  const [timeLeft, setTimeLeft] = useState("");
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const depTime = new Date(flight.dep);
+      const arrTime = new Date(flight.arr);
+      const diffMs = depTime - now;
+
+      if (now > arrTime) {
+        setStatus("已抵達");
+        setColor("text-stone-500 bg-stone-100");
+        setTimeLeft("旅程結束");
+      } else if (now > depTime) {
+        setStatus("飛行中");
+        setColor("text-blue-600 bg-blue-50");
+        setTimeLeft("航行中");
+      } else if (diffMs < 30 * 60 * 1000 && diffMs > 0) {
+        setStatus("登機中");
+        setColor("text-rose-600 bg-rose-50 animate-pulse");
+        setTimeLeft(`起飛前 ${Math.floor(diffMs / 60000)} 分`);
+      } else {
+        setStatus("準時");
+        setColor("text-emerald-600 bg-emerald-50");
+        const hours = Math.floor(diffMs / (1000 * 60 * 60));
+        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+        if (hours > 24) {
+           setTimeLeft(`${Math.floor(hours/24)}天後起飛`);
+        } else {
+           setTimeLeft(`${hours}時${minutes}分後起飛`);
+        }
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [flight]);
+
+  return (
+    <div className="bg-white rounded-xl p-4 border border-stone-100 shadow-sm mb-3">
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center gap-2">
+          <Plane size={16} className="text-stone-400" />
+          <span className="text-lg font-black tracking-wider text-stone-800">{flight.code}</span>
+        </div>
+        <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${color}`}>
+          {status}
+        </div>
+      </div>
+      
+      <div className="flex justify-between items-center text-stone-800">
+        <div>
+          <span className="text-2xl font-bold block leading-none">{flight.dep.split('T')[1].slice(0,5)}</span>
+          <span className="text-[10px] text-stone-400 font-bold">{flight.route.split('->')[0].trim()}</span>
+        </div>
+        <div className="flex-1 px-4 flex flex-col items-center">
+          <span className="text-[10px] text-stone-400 mb-1">{timeLeft}</span>
+          <div className="w-full h-px bg-stone-200 relative">
+             <div className="absolute right-0 -top-1 w-2 h-2 rounded-full bg-stone-300"></div>
+             <div className="absolute left-0 -top-1 w-2 h-2 rounded-full bg-stone-300"></div>
+          </div>
+        </div>
+        <div className="text-right">
+          <span className="text-2xl font-bold block leading-none">{flight.arr.split('T')[1].slice(0,5)}</span>
+          <span className="text-[10px] text-stone-400 font-bold">{flight.route.split('->')[1].trim()}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Weather Widget ---
+const WeatherWidget = () => {
+  return (
+    <div className="bg-gradient-to-br from-sky-400 to-blue-500 p-4 rounded-xl text-white shadow-lg shadow-blue-100 relative overflow-hidden">
+      <div className="relative z-10 flex justify-between items-start">
+        <div>
+          <p className="text-blue-50 text-[10px] font-bold mb-1 opacity-80">NAHA NOW</p>
+          <h3 className="text-3xl font-black">21°C</h3>
+          <p className="text-xs font-medium mt-1 opacity-90">舒適宜人</p>
+        </div>
+        <div className="bg-white/20 p-2 rounded-lg backdrop-blur-md">
+          <Sun className="text-yellow-300" size={24} />
+        </div>
+      </div>
+      <CloudLightning size={60} className="absolute -right-4 -bottom-4 text-white opacity-10" />
+    </div>
+  );
+};
+
+// --- Traffic Card (Restored) ---
+const TrafficCard = () => (
+  <div className="bg-white rounded-xl p-4 border border-stone-100 shadow-sm mb-4">
+    <h4 className="font-bold text-stone-700 flex items-center gap-2 mb-3 text-sm">
+      <Car size={16} className="text-amber-500" /> 沖繩路況攻略
+    </h4>
+    <div className="space-y-3 text-xs text-stone-600">
+      <div className="flex items-start gap-2 bg-stone-50 p-2 rounded">
+        <span className="bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-bold shrink-0 text-[10px]">塞車</span>
+        <p>
+          <span className="font-bold block text-stone-800">國道 58 號線 (北谷 - 那霸)</span>
+          平日通勤時段 (07:30-09:00 及 17:00-19:00) 嚴重壅塞，請預留 30 分鐘緩衝。
+        </p>
+      </div>
+      <div className="flex items-start gap-2 bg-stone-50 p-2 rounded">
+        <span className="bg-orange-100 text-orange-600 px-1.5 py-0.5 rounded font-bold shrink-0 text-[10px]">管制</span>
+        <p>
+          <span className="font-bold block text-stone-800">國際通 (步行者天國)</span>
+          每週日 12:00-18:00 實施封街，車輛禁止進入，請改道行駛。
+        </p>
+      </div>
+      <div className="flex items-start gap-2 bg-stone-50 p-2 rounded">
+        <span className="bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded font-bold shrink-0 text-[10px]">專用</span>
+        <p>
+          <span className="font-bold block text-stone-800">公車專用道 (Bus Lane)</span>
+          早晚尖峰特定路段最外側車道僅限公車，誤闖會被罰款。
+        </p>
+      </div>
+    </div>
+    <a href="https://www.google.com/maps/@26.2124,127.6809,11z/data=!5m1!1e1" target="_blank" rel="noreferrer" className="block mt-3 text-center text-indigo-600 text-xs font-bold border-t border-stone-100 pt-2 hover:bg-stone-50 rounded">
+      開啟 Google Maps 即時路況
+    </a>
+  </div>
+);
+
+// --- Itinerary Data with MapCodes ---
+const itineraryData = [
+  {
+    id: "day1",
+    date: "12/19",
+    day: "Day 1",
+    location: "晚班機 / 抵達",
+    activities: [
+      {
+        time: "16:20",
+        title: "桃園機場報到",
+        type: "transport",
+        icon: <Plane size={18} />,
+        location: "Taoyuan International Airport T1",
+        address: "Taoyuan International Airport",
+        tips: "請務必提前 2 小時抵達。樂桃是在第一航廈。",
+        desc: "MM930 起飛時間為 18:20。建議先在機場吃晚餐，或是買點東西上飛機吃。",
+        tags: ["護照", "Visit Japan Web"]
+      },
+      {
+        time: "20:50",
+        title: "抵達那霸機場",
+        type: "transport",
+        icon: <MapPin size={18} />,
+        location: "Naha Airport",
+        address: "Naha Airport",
+        mapcode: "33 123 272*52",
+        tips: "入境後前往國內線航廈轉乘單軌。",
+        desc: "下機後請依照指示辦理入境手續。",
+        tags: ["飛行模式"]
+      },
+      {
+        time: "22:15",
+        title: "Check-in 喜璃癒志 LCH",
+        type: "hotel",
+        icon: <BedDouble size={18} />,
+        location: "Kariyushi LCH Izumizaki Kenchomae",
+        address: "1-11-8 Izumizaki, Naha, Okinawa 900-0021",
+        mapcode: "33 126 505*52", 
+        tips: "備品需自備。樓下有 Lawson 可以買宵夜。",
+        desc: "位於縣廳前站走路 3 分鐘。請注意：LCH 房型較小，打開行李箱可能需要喬一下位置。",
+        tags: ["住宿: 縣廳前"]
+      }
+    ]
+  },
+  {
+    id: "day2",
+    date: "12/20",
+    day: "Day 2",
+    location: "南部 / 浦添 / 北谷",
+    activities: [
+      {
+        time: "09:00",
+        title: "SKY RENT A CAR 取車",
+        type: "transport",
+        icon: <Car size={18} />,
+        location: "SKY RENT A CAR Naha (Kume)",
+        address: "2 Chome-6-16 Kume, Naha, Okinawa 900-0033",
+        mapcode: "33 156 344*86",
+        tips: "請攜帶：台灣駕照 + 日文譯本 + 護照。",
+        desc: "地址已更新為久米店。辦理手續約需 30-40 分鐘。檢查車況時請錄影存證。",
+        tags: ["重要: 駕照正本"]
+      },
+      {
+        time: "10:30",
+        title: "平和祈念公園",
+        type: "sightseeing",
+        icon: <MapPin size={18} />,
+        location: "Okinawa Peace Memorial Park",
+        address: "614-1 Mabuni, Itoman, Okinawa 901-0333",
+        mapcode: "232 311 440*13",
+        tips: "往南開，莊嚴遼闊，看海的好地方。",
+        desc: "雖然有沈重的歷史背景，但現在是景色優美的公園。適合稍微散步，感受沖繩南部的海風。",
+        tags: ["南部"]
+      },
+      {
+        time: "12:00",
+        title: "奧武島 (中本鮮魚天婦羅)",
+        type: "food",
+        icon: <Utensils size={18} />,
+        location: "Ou Island Tempura",
+        address: "9 Tamagusuku, Nanjo, Okinawa 901-0614",
+        mapcode: "232 467 296*75",
+        tips: "必吃：炸海藻 (Mozuku)、炸魚。",
+        desc: "午餐就在這裡解決，買天婦羅在堤防邊看海吃 (小心貓咪搶食)。吃完開始往北走。",
+        tags: ["必吃", "貓奴"]
+      },
+      {
+        time: "14:00",
+        title: "西來院 (達磨寺)",
+        type: "sightseeing",
+        icon: <MapPin size={18} />,
+        location: "Darumaji Sairaiin",
+        address: "1 Chome-5-1 Shuriteracho, Naha, Okinawa 903-0806",
+        mapcode: "33 191 166*85",
+        tips: "北上順路經過那霸/首里區域。",
+        desc: "祈求這幾天自駕交通安全。滿滿的紅色達磨不倒翁非常適合拍照。",
+        tags: ["祈福"]
+      },
+      {
+        time: "15:30",
+        title: "Workman Plus 浦添經塚",
+        type: "shopping",
+        icon: <ShoppingBag size={18} />,
+        location: "Workman Plus Urasoe Kyozuka",
+        address: "392 Kyozuka, Urasoe, Okinawa 901-2111",
+        mapcode: "33 255 609*82",
+        tips: "高機能、低價格的職人品牌。",
+        desc: "從那霸往中部的順路點。推薦：防水外套、防滑鞋、機能露營用品。非常好買！",
+        tags: ["必逛", "平價神牌"]
+      },
+      {
+        time: "17:00",
+        title: "AEON MALL Rycom",
+        type: "shopping",
+        icon: <ShoppingBag size={18} />,
+        location: "AEON MALL Okinawa Rycom",
+        address: "1 Rycom, Kitanakagusuku, Nakagami District, Okinawa 901-2306",
+        mapcode: "33 530 406*45",
+        tips: "沖繩最大商場，水族箱必拍。",
+        desc: "這裡有 Pokemon Center、Bic Camera。晚餐前的小逛。",
+        tags: ["雨備"]
+      },
+      {
+        time: "18:30",
+        title: "美國村 (聖誕燈飾)",
+        type: "sightseeing",
+        icon: <MapPin size={18} />,
+        location: "Mihama American Village",
+        address: "Mihama, Chatan, Nakagami District, Okinawa 904-0115",
+        mapcode: "33 525 382*47",
+        tips: "充滿異國風情，12月燈飾超美。",
+        desc: "日落後整個園區會點燈，非常有聖誕氣氛。可以在 Depot Island 區拍照。",
+        tags: ["夜景"]
+      },
+      {
+        time: "19:45",
+        title: "琉球的牛 (北谷店)",
+        type: "food",
+        icon: <Utensils size={18} />,
+        location: "Ryukyu no Ushi Chatan",
+        address: "904-0115 Okinawa, Nakagami District, Chatan, Mihama, 51-1 2F",
+        mapcode: "33 526 450*63",
+        tips: "已預約 19:45，請勿遲到。",
+        desc: "頂級燒肉體驗。建議點套餐比較划算。肉質極佳，入口即化。",
+        tags: ["必吃: 和牛", "預約確認"]
+      },
+      {
+        time: "21:30",
+        title: "Check-in Riyuka",
+        type: "hotel",
+        icon: <BedDouble size={18} />,
+        location: "Condominium Hotel Riyuka in Kadena",
+        address: "6-25-13 Mizugama, Kadena, Nakagami District, Okinawa 904-0204",
+        mapcode: "33 704 639*25",
+        tips: "公寓式酒店，有洗衣機可洗衣服。",
+        desc: "位於嘉手納，附近比較安靜。適合整理行李和休息。",
+        tags: ["住宿: 嘉手納"]
+      }
+    ]
+  },
+  {
+    id: "day3",
+    date: "12/21",
+    day: "Day 3",
+    location: "中部 / 浦添 / 那霸",
+    activities: [
+      {
+        time: "10:00",
+        title: "普天滿宮 (鐘乳石洞)",
+        type: "sightseeing",
+        icon: <MapPin size={18} />,
+        location: "Futenma Shrine",
+        address: "1 Chome-27-10 Futenma, Ginowan, Okinawa 901-2202",
+        mapcode: "33 438 615*06",
+        tips: "需至社務所登記才能參觀地下鐘乳石洞。",
+        desc: "沖繩八社之一。本殿下方有一個神秘的鐘乳石洞穴，非常莊嚴特別。參觀免費，約需 20 分鐘。",
+        tags: ["必去", "能量景點"]
+      },
+      {
+        time: "11:30",
+        title: "高江洲そば (Takaesu Soba)",
+        type: "food",
+        icon: <Utensils size={18} />,
+        location: "Takaesu Soba",
+        address: "3 Chome-36-1 Isa, Ginowan, Okinawa 901-2221",
+        mapcode: "33 311 237*25",
+        tips: "在地人推薦！必點『Yushi Tofu Soba (ゆし豆腐そば)』。",
+        desc: "浦添/宜野灣交界的名店。湯頭濃郁，豆腐軟嫩，是玩完普天滿宮後的午餐首選。",
+        tags: ["在地美食", "排隊名店"]
+      },
+      {
+        time: "12:30",
+        title: "漫畫倉庫 浦添店",
+        type: "shopping",
+        icon: <ShoppingBag size={18} />,
+        location: "Manga Souko Urasoe",
+        address: "262 Shiroma, Urasoe, Okinawa 901-2103",
+        mapcode: "33 341 535*74",
+        tips: "24小時營業的二手尋寶天堂。",
+        desc: "除了漫畫，還有公仔、遊戲、名牌包、古著。小心逛到忘記時間！",
+        tags: ["挖寶"]
+      },
+      {
+        time: "14:30",
+        title: "PARCO CITY (最後採買)",
+        type: "shopping",
+        icon: <ShoppingBag size={18} />,
+        location: "San-A Urasoe West Coast PARCO CITY",
+        address: "3 Chome-1-1 Irijima, Urasoe, Okinawa 901-2123",
+        mapcode: "33 308 899*17",
+        tips: "海景無敵，也是還車前最後一站。",
+        desc: "沿海而建。這裡有大型 3COINS+plus、Uniqlo。請在此將伴手禮買齊。",
+        tags: ["購物"]
+      },
+      {
+        time: "17:30",
+        title: "加油 & 還車 (SKY)",
+        type: "transport",
+        icon: <AlertTriangle size={18} className="text-amber-500" />,
+        location: "SKY RENT A CAR Naha",
+        address: "2 Chome-6-16 Kume, Naha, Okinawa 900-0033",
+        mapcode: "33 156 344*86",
+        tips: "務必加滿油 (保留收據)。",
+        desc: "還車手續約 30 分鐘。之後搭乘接駁車或計程車前往今晚飯店 (LCH)。",
+        tags: ["重要: 加油"]
+      },
+      {
+        time: "18:30",
+        title: "Check-in 喜璃癒志 LCH",
+        type: "hotel",
+        icon: <BedDouble size={18} />,
+        location: "Kariyushi LCH Izumizaki Kenchomae",
+        address: "1-11-8 Izumizaki, Naha, Okinawa 900-0021",
+        mapcode: "33 126 505*52",
+        tips: "再次入住 LCH。放行李稍微休息。",
+        desc: "放完行李後，準備前往晚上的表演場地。",
+        tags: ["住宿: 縣廳前"]
+      },
+      {
+        time: "20:00",
+        title: "Churasun6 (入場)",
+        type: "sightseeing",
+        icon: <Ticket size={18} />,
+        location: "Churasun6 Okinawa",
+        address: "1-5-1 Matsuyama, Naha, Okinawa 900-0032",
+        mapcode: "33 157 265*82",
+        tips: "20:30 開演。已購票。",
+        desc: "從 LCH 飯店搭計程車約 5-10 分鐘 (或步行 15 分鐘)。沖繩最High的夜間表演秀。",
+        tags: ["已購票", "夜生活"]
+      }
+    ]
+  },
+  {
+    id: "day4",
+    date: "12/22",
+    day: "Day 4",
+    location: "早班機 / 返台",
+    activities: [
+      {
+        time: "06:00",
+        title: "前往機場",
+        type: "transport",
+        icon: <Car size={18} />,
+        location: "Naha Airport International Terminal",
+        address: "Naha Airport",
+        tips: "建議搭乘計程車 (約15分鐘)。",
+        desc: "MM921 08:15 起飛，單軌首班車 06:00 可能稍趕，三人搭計程車最保險。",
+        tags: ["早起"]
+      },
+      {
+        time: "08:15",
+        title: "MM921 返台",
+        type: "transport",
+        icon: <Plane size={18} />,
+        location: "Naha Airport",
+        address: "Naha Airport",
+        tips: "最後免稅店衝刺。",
+        desc: "預計 08:55 抵達桃園機場。回家休息準備隔天上班。",
+        tags: ["回程"]
+      }
+    ]
+  }
+];
+
+// --- Components ---
+
+const Header = () => (
+  <header className="fixed top-0 w-full bg-white/95 backdrop-blur-md z-20 border-b border-stone-200 shadow-sm max-w-md mx-auto left-0 right-0">
+    <div className="px-5 py-3 flex justify-between items-center">
+      <div>
+        <h1 className="text-lg font-black text-stone-800 tracking-wider">OKINAWA '25</h1>
+        <p className="text-[10px] text-stone-500 font-bold tracking-[0.2em] uppercase">Winter Trip</p>
+      </div>
+      {/* 3人旅 Tag Removed based on user feedback */}
+    </div>
+  </header>
+);
+
+const DayNavigator = ({ onScrollTo }) => (
+  <div className="fixed top-[60px] w-full max-w-md z-10 bg-white/95 backdrop-blur border-b border-stone-200 px-2 py-2 flex justify-between gap-2 overflow-x-auto no-scrollbar">
+    {itineraryData.map((day, idx) => (
+      <button 
+        key={idx}
+        onClick={() => onScrollTo(day.id)}
+        className="flex-1 min-w-[70px] bg-stone-50 hover:bg-stone-100 active:bg-indigo-50 active:text-indigo-600 border border-stone-100 rounded-lg py-1.5 flex flex-col items-center transition-colors"
+      >
+        <span className="text-[10px] text-stone-400 font-bold uppercase">{day.day}</span>
+        <span className="text-xs font-black text-stone-700">{day.date}</span>
+      </button>
+    ))}
+  </div>
+);
+
+const ActivityModal = ({ activity, onClose }) => {
+  const [copied, setCopied] = useState(false);
+
+  if (!activity) return null;
+
+  const handleCopy = () => {
+    copyToClipboard(activity.address);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyMapCode = () => {
+    if (activity.mapcode) {
+      copyToClipboard(activity.mapcode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const isFood = activity.icon.type === Utensils || activity.icon.type === Coffee;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 animate-fade-in">
+      <div className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="bg-white w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl relative z-10 animate-scale-in flex flex-col max-h-[85vh]">
+        <div className="h-28 bg-stone-50 relative overflow-hidden shrink-0">
+          <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#444cf7_1px,transparent_1px)] [background-size:16px_16px]"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="bg-white p-4 rounded-full shadow-lg text-indigo-600">
+              {activity.icon}
+            </div>
+          </div>
+          <button onClick={onClose} className="absolute top-3 right-3 bg-white/80 p-2 rounded-full text-stone-500 hover:text-stone-800 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+        
+        <div className="p-6 overflow-y-auto">
+          <h3 className="text-2xl font-black text-stone-800 mb-1">{activity.title}</h3>
+          <div className="flex flex-col gap-1 text-stone-500 text-xs font-mono mb-4">
+             <div className="flex items-start">
+               <MapPin size={12} className="mr-1 mt-0.5 shrink-0" /> 
+               <span className="leading-tight">{activity.address}</span>
+             </div>
+             {activity.mapcode && (
+               <div className="flex items-center text-indigo-600 font-bold">
+                 <Navigation size={12} className="mr-1 shrink-0" /> 
+                 MAPCODE: {activity.mapcode}
+               </div>
+             )}
+          </div>
+
+          <div className="flex gap-2 mb-5 flex-wrap">
+            {activity.tags.map((tag, i) => (
+              <span key={i} className="px-2 py-1 bg-indigo-50 text-indigo-700 text-xs rounded-md font-bold">
+                {tag}
+              </span>
+            ))}
+          </div>
+          
+          <p className="text-stone-600 text-sm leading-relaxed mb-6">
+            {activity.desc}
+          </p>
+
+          {activity.tips && (
+            <div className="bg-amber-50 border-l-4 border-amber-300 p-3 mb-6 rounded-r-lg">
+              <p className="text-xs text-amber-800 font-medium flex items-start gap-2">
+                <Info size={14} className="mt-0.5 shrink-0" />
+                {activity.tips}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 bg-stone-50 border-t border-stone-200 shrink-0 grid grid-cols-2 gap-3">
+          <button 
+            onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(activity.title + " " + activity.address)}`, '_blank')}
+            className="col-span-2 flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200"
+          >
+            <Navigation size={16} /> 開啟 Google Maps 導航
+          </button>
+
+          {activity.mapcode ? (
+            <button 
+              onClick={handleCopyMapCode}
+              className={`flex items-center justify-center gap-2 border py-3 rounded-xl font-bold text-sm transition-colors ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'}`}
+            >
+              {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />} 
+              {copied ? "已複製" : "複製 MapCode"}
+            </button>
+          ) : (
+             <button 
+              onClick={handleCopy}
+              className={`flex items-center justify-center gap-2 border py-3 rounded-xl font-bold text-sm transition-colors ${copied ? 'bg-emerald-50 border-emerald-200 text-emerald-600' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'}`}
+            >
+              {copied ? <CheckCircle2 size={16} /> : <Copy size={16} />} 
+              {copied ? "已複製" : "複製地址"}
+            </button>
+          )}
+
+          <button 
+            onClick={() => {
+                const query = isFood ? `tabelog ${activity.title}` : `instagram ${activity.title}`;
+                window.open(`https://www.google.com/search?q=${encodeURIComponent(query)}`, '_blank');
+            }}
+            className={`flex items-center justify-center gap-2 bg-white text-stone-600 border border-stone-200 py-3 rounded-xl font-bold text-sm hover:bg-stone-50 transition-colors`}
+          >
+            {isFood ? <Utensils size={16} /> : <Instagram size={16} />}
+            {isFood ? "查看食評" : "IG 探店"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ActivityCard = ({ activity, onClick }) => {
+  return (
+    <div 
+      onClick={() => onClick(activity)}
+      className="group flex gap-4 mb-5 relative pl-4 border-l-2 border-dashed border-stone-200 last:mb-2 cursor-pointer active:scale-[0.98] transition-transform"
+    >
+      <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-white border-4 border-stone-300 z-0 shadow-sm group-hover:border-indigo-500 transition-colors"></div>
+      
+      <div className="flex-1 bg-white rounded-xl p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-stone-100 hover:shadow-md hover:border-indigo-200 transition-all">
+        <div className="flex justify-between items-start mb-2">
+          <div className="flex items-center text-stone-400 text-[10px] font-bold tracking-widest bg-stone-50 px-2 py-1 rounded uppercase">
+            {activity.time}
+          </div>
+          {activity.mapcode && <div className="text-[9px] font-mono text-stone-300 bg-stone-50 px-1 rounded">MC</div>}
+        </div>
+        
+        <h3 className="font-bold text-stone-800 text-base leading-tight mb-1 flex items-center gap-2">
+          {activity.title}
+        </h3>
+        
+        <div className="flex flex-wrap gap-1 mt-2">
+          {activity.tags.slice(0, 3).map((tag, idx) => {
+             let color = "text-stone-400 bg-stone-50";
+             if(tag.includes("必吃") || tag.includes("預約") || tag.includes("已購票")) color = "text-rose-600 bg-rose-50";
+             if(tag.includes("重要") || tag.includes("駕照") || tag.includes("必逛")) color = "text-amber-600 bg-amber-50 font-bold";
+             
+             return (
+              <span key={idx} className={`text-[10px] px-1.5 py-0.5 rounded ${color}`}>
+                #{tag}
+              </span>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DayCard = ({ dayData, onActivityClick, id }) => {
+  const weather = weatherData[dayData.date];
+  
+  return (
+    <div id={id} className="scroll-mt-[130px] mb-12">
+      {/* Reverted to Gradient Style */}
+      <div className={`rounded-2xl p-4 mb-4 ${weather.color} shadow-sm relative overflow-hidden`}>
+        <div className="relative z-10 flex justify-between items-end">
+          <div>
+            <span className="text-white/80 font-bold text-xs uppercase tracking-widest flex items-center gap-1 mb-1">
+              {dayData.day} <ArrowRight size={10} /> {dayData.location}
+            </span>
+            <h2 className="text-3xl font-black tracking-tight">{dayData.date}</h2>
+          </div>
+          <div className="flex flex-col items-end">
+             <div className="bg-white/20 backdrop-blur-md p-2 rounded-lg flex items-center gap-2">
+               {weather.icon}
+               <span className="font-bold">{weather.temp}</span>
+             </div>
+             <span className="text-[10px] mt-1 font-medium text-white/90">{weather.desc}</span>
+          </div>
+        </div>
+        <div className="absolute -right-4 -bottom-4 opacity-10 rotate-12">
+          {weather.icon}
+        </div>
+      </div>
+      
+      <div className="px-1">
+        {dayData.activities.map((act, idx) => (
+          <ActivityCard key={idx} activity={act} onClick={onActivityClick} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// --- Budget Tracker (Restored Split Bill) ---
+
+const BudgetTracker = () => {
+  const [activeTab, setActiveTab] = useState('pool'); // pool | personal | split
+  const [poolHistory, setPoolHistory] = useState([]);
+  const [personalHistory, setPersonalHistory] = useState([]);
+  const [splitAmount, setSplitAmount] = useState('');
+  
+  // Inputs
+  const [desc, setDesc] = useState('');
+  const [amount, setAmount] = useState('');
+  const [category, setCategory] = useState('food');
+
+  // Load
+  useEffect(() => {
+    const savedPool = localStorage.getItem('okinawa_pool_v6');
+    if (savedPool) setPoolHistory(JSON.parse(savedPool));
+    
+    const savedPersonal = localStorage.getItem('okinawa_personal_v6');
+    if (savedPersonal) setPersonalHistory(JSON.parse(savedPersonal));
+  }, []);
+
+  // Save
+  useEffect(() => {
+    localStorage.setItem('okinawa_pool_v6', JSON.stringify(poolHistory));
+  }, [poolHistory]);
+
+  useEffect(() => {
+    localStorage.setItem('okinawa_personal_v6', JSON.stringify(personalHistory));
+  }, [personalHistory]);
+
+  const poolBalance = useMemo(() => {
+    return poolHistory.reduce((acc, item) => item.type === 'deposit' ? acc + item.amount : acc - item.amount, 0);
+  }, [poolHistory]);
+
+  const personalTotal = useMemo(() => {
+    return personalHistory.reduce((acc, item) => acc + item.amount, 0);
+  }, [personalHistory]);
+
+  const handleTransaction = (type) => {
+    if (!desc || !amount) return;
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+    const newItem = { 
+      id: Date.now(), 
+      desc, 
+      amount: parseFloat(amount), 
+      type, // 'deposit', 'expense'
+      time: timeStr,
+      date: now.toLocaleDateString(),
+      category 
+    };
+
+    if (activeTab === 'pool') {
+      setPoolHistory([newItem, ...poolHistory]);
+    } else {
+      setPersonalHistory([newItem, ...personalHistory]);
+    }
+    setDesc(''); setAmount('');
+  };
+
+  const deleteItem = (id, isPool) => {
+    if (isPool) {
+      setPoolHistory(poolHistory.filter(i => i.id !== id));
+    } else {
+      setPersonalHistory(personalHistory.filter(i => i.id !== id));
+    }
+  };
+
+  const renderHistory = (history, isPool) => (
+    <div className="space-y-2 mt-4">
+      {history.map(item => (
+        <div key={item.id} className="flex justify-between items-center bg-white p-3 rounded-lg border border-stone-100">
+           <div className="flex items-center gap-3">
+              <span className="text-xs font-mono text-stone-400 bg-stone-50 px-1 rounded">{item.time}</span>
+              <div>
+                <p className="text-stone-800 text-sm font-bold">{item.desc}</p>
+                <p className="text-[10px] text-stone-400">{item.date}</p>
+              </div>
+           </div>
+           <div className="flex items-center gap-3">
+              <span className={`font-mono font-bold ${item.type === 'deposit' ? 'text-emerald-600' : 'text-stone-800'}`}>
+                 {item.type === 'deposit' ? '+' : '-'} {item.amount.toLocaleString()}
+              </span>
+              <button onClick={() => deleteItem(item.id, isPool)} className="text-stone-300 hover:text-red-400">
+                <Trash2 size={14} />
+              </button>
+           </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="pt-4 pb-24 px-4">
+      <div className="flex bg-stone-100 p-1 rounded-xl mb-6">
+        {['pool', 'personal', 'split'].map(tab => (
+           <button 
+             key={tab}
+             onClick={() => setActiveTab(tab)} 
+             className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${activeTab === tab ? 'bg-white shadow-sm text-stone-800' : 'text-stone-400'}`}
+           >
+             {tab === 'pool' ? '公費' : tab === 'personal' ? '個人' : '分帳'}
+           </button>
+        ))}
+      </div>
+
+      {activeTab === 'split' ? (
+         <div className="animate-fade-in bg-white p-8 rounded-2xl border border-stone-100 text-center">
+            <Calculator size={48} className="mx-auto text-indigo-500 mb-4" />
+            <h3 className="text-lg font-bold text-stone-800 mb-6">分帳計算機 (3人)</h3>
+            <input 
+              type="number" 
+              placeholder="輸入總金額" 
+              className="w-full text-center text-3xl font-black text-stone-800 border-b-2 border-stone-200 focus:border-indigo-500 outline-none py-2 mb-6"
+              value={splitAmount}
+              onChange={e => setSplitAmount(e.target.value)}
+            />
+            {splitAmount && (
+              <div className="bg-stone-50 p-4 rounded-xl">
+                <p className="text-xs text-stone-400 uppercase font-bold mb-1">每人應付</p>
+                <p className="text-4xl font-black text-indigo-600">¥ {Math.ceil(splitAmount / 3).toLocaleString()}</p>
+              </div>
+            )}
+         </div>
+      ) : (
+        <>
+          <div className={`${activeTab === 'pool' ? 'bg-indigo-600' : 'bg-stone-800'} text-white p-6 rounded-2xl shadow-lg mb-6 relative overflow-hidden transition-colors duration-300`}>
+            <div className="relative z-10">
+              <p className="text-white/60 text-xs font-bold uppercase mb-1">{activeTab === 'pool' ? 'Public Fund Balance' : 'My Total Spending'}</p>
+              <h2 className="text-4xl font-bold">¥ {(activeTab === 'pool' ? poolBalance : personalTotal).toLocaleString()}</h2>
+            </div>
+            {activeTab === 'pool' ? <Users size={100} className="absolute -right-4 -bottom-4 opacity-20" /> : <Wallet size={100} className="absolute -right-4 -bottom-4 opacity-20" />}
+          </div>
+
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100">
+            <div className="flex gap-2 mb-3">
+              <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="項目 (例: 晚餐)" className="w-2/3 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500" />
+              <input value={amount} type="number" onChange={e => setAmount(e.target.value)} placeholder="¥ 金額" className="w-1/3 bg-stone-50 border border-stone-200 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500" />
+            </div>
+            <div className="flex gap-2">
+              {activeTab === 'pool' ? (
+                <>
+                  <button onClick={() => handleTransaction('deposit')} className="flex-1 bg-emerald-50 text-emerald-600 py-2 rounded-lg text-xs font-bold hover:bg-emerald-100 border border-emerald-100">+ 公費入金</button>
+                  <button onClick={() => handleTransaction('expense')} className="flex-1 bg-rose-50 text-rose-600 py-2 rounded-lg text-xs font-bold hover:bg-rose-100 border border-rose-100">- 公費支出</button>
+                </>
+              ) : (
+                <button onClick={() => handleTransaction('expense')} className="flex-1 bg-stone-800 text-white py-2 rounded-lg text-xs font-bold hover:bg-stone-700">新增消費</button>
+              )}
+            </div>
+          </div>
+          {renderHistory(activeTab === 'pool' ? poolHistory : personalHistory, activeTab === 'pool')}
+        </>
+      )}
+    </div>
+  );
+};
+
+const InfoSection = () => (
+  <div className="pt-4 pb-24 px-4 space-y-6">
+    <div className="grid grid-cols-2 gap-3">
+      <WeatherWidget />
+      <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100 flex flex-col justify-center">
+        <p className="text-stone-400 text-xs font-bold uppercase mb-1">Exchange Rate</p>
+        <div className="flex items-end gap-1">
+          <span className="text-3xl font-black text-stone-800">0.22</span>
+          <span className="text-xs text-stone-500 font-medium mb-1.5">TWD/JPY</span>
+        </div>
+        <p className="text-[10px] text-stone-400 mt-1">*僅供參考</p>
+      </div>
+    </div>
+
+    <div>
+      <h3 className="font-bold text-stone-400 text-xs uppercase tracking-widest mb-3 ml-1">Live Flights</h3>
+      {flights.map(f => <FlightWidget key={f.code} flight={f} />)}
+    </div>
+
+    {/* Traffic Card added back here */}
+    <TrafficCard />
+
+    <div className="bg-red-50 p-5 rounded-2xl border border-red-100">
+      <h3 className="font-bold text-red-800 mb-3 flex items-center gap-2 text-sm uppercase tracking-wider">
+        <Phone size={16} /> Emergency
+      </h3>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="bg-white/60 p-2 rounded border border-red-100"><span className="text-[10px] text-red-400 font-bold block">警察</span>110</div>
+        <div className="bg-white/60 p-2 rounded border border-red-100"><span className="text-[10px] text-red-400 font-bold block">救護</span>119</div>
+        <div className="bg-white/60 p-2 rounded border border-red-100"><span className="text-[10px] text-red-400 font-bold block">租車</span>098-858-0678</div>
+        <div className="bg-white/60 p-2 rounded border border-red-100"><span className="text-[10px] text-red-400 font-bold block">外交部</span>080-1009-2436</div>
+      </div>
+    </div>
+  </div>
+);
+
+// --- Main App ---
+
+const App = () => {
+  const [activeTab, setActiveTab] = useState('schedule');
+  const [selectedActivity, setSelectedActivity] = useState(null);
+
+  const scrollToDay = (dayId) => {
+    setActiveTab('schedule');
+    const element = document.getElementById(dayId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-stone-50 font-sans text-stone-800 selection:bg-indigo-100 selection:text-indigo-800">
+      <div className="max-w-md mx-auto bg-stone-50 min-h-screen relative shadow-2xl border-x border-stone-200">
+        <Header />
+        
+        {activeTab === 'schedule' && <DayNavigator onScrollTo={scrollToDay} />}
+
+        <main className={`${activeTab === 'schedule' ? 'pt-36' : 'pt-24'} px-4 pb-24`}>
+          {activeTab === 'schedule' && (
+            <div className="animate-fade-in">
+              {itineraryData.map((day, idx) => (
+                <DayCard key={idx} id={day.id} dayData={day} onActivityClick={setSelectedActivity} />
+              ))}
+              <div className="text-center opacity-30 text-[10px] py-4">
+                Designed for Okinawa Winter Trip
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'info' && <InfoSection />}
+          
+          {activeTab === 'budget' && <BudgetTracker />}
+        </main>
+
+        {selectedActivity && (
+          <ActivityModal 
+            activity={selectedActivity} 
+            onClose={() => setSelectedActivity(null)} 
+          />
+        )}
+
+        <nav className="fixed bottom-0 max-w-md w-full bg-white/95 backdrop-blur border-t border-stone-200 flex justify-around pb-safe safe-area-bottom z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.03)]">
+          <NavButton 
+            active={activeTab === 'schedule'} 
+            onClick={() => setActiveTab('schedule')} 
+            icon={<Calendar size={22} />} 
+            label="行程" 
+          />
+          <NavButton 
+            active={activeTab === 'info'} 
+            onClick={() => setActiveTab('info')} 
+            icon={<Info size={22} />} 
+            label="情報" 
+          />
+          <NavButton 
+            active={activeTab === 'budget'} 
+            onClick={() => setActiveTab('budget')} 
+            icon={<Wallet size={22} className={activeTab === 'budget' ? "fill-indigo-100" : ""} />} 
+            label="記帳" 
+          />
+        </nav>
+      </div>
+    </div>
+  );
+};
+
+const NavButton = ({ active, icon, label, onClick }) => (
+  <button 
+    onClick={onClick}
+    className={`flex flex-col items-center justify-center w-full py-3 transition-all duration-200 ${active ? 'text-indigo-600' : 'text-stone-300 hover:text-stone-500'}`}
+  >
+    <div className={`transition-transform duration-200 ${active ? 'scale-110' : 'scale-100'}`}>
+      {icon}
+    </div>
+    <span className={`text-[9px] mt-1 font-bold ${active ? 'opacity-100' : 'opacity-0 scale-0'} transition-all duration-200`}>{label}</span>
+  </button>
+);
+
+export default App;
+
 
