@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>沖繩冬日之旅 2025 (雲端共用版)</title>
+    <title>沖繩冬日之旅 2025 (雲端完整版)</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -38,15 +38,6 @@
         .editing-shake {
             animation: shake 0.3s ease-in-out infinite;
         }
-        .loading-spinner {
-            border: 3px solid rgba(0,0,0,0.1);
-            border-radius: 50%;
-            border-top: 3px solid #4f46e5;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -67,24 +58,24 @@
         } from 'lucide-react';
 
         // ---------------------------------------------------------
-        // ▼▼▼ 請在下方貼上您的 Firebase Config (從步驟 1 取得) ▼▼▼
+        // ▼▼▼ Firebase Config (已保留您的設定) ▼▼▼
         // ---------------------------------------------------------
         const firebaseConfig = {
-  apiKey: "AIzaSyAIPHSfn51s-czwQ70TVKVU6TwdXXyYcKk",
-  authDomain: "oka-31467.firebaseapp.com",
-  projectId: "oka-31467",
-  storageBucket: "oka-31467.firebasestorage.app",
-  messagingSenderId: "659766464698",
-  appId: "1:659766464698:web:fc0d5270780f8afb143283",
-  measurementId: "G-J7VDPZMN35"
-};
+            apiKey: "AIzaSyAIPHSfn51s-czwQ70TVKVU6TwdXXyYcKk",
+            authDomain: "oka-31467.firebaseapp.com",
+            projectId: "oka-31467",
+            storageBucket: "oka-31467.firebasestorage.app",
+            messagingSenderId: "659766464698",
+            appId: "1:659766464698:web:fc0d5270780f8afb143283",
+            measurementId: "G-J7VDPZMN35"
+        };
         // ---------------------------------------------------------
 
-        // Initialize Firebase (Try/Catch to prevent crash if config is empty)
+        // Initialize Firebase
         let db;
         let isFirebaseReady = false;
         try {
-            if (firebaseConfig.apiKey !== "AIzaSy...") {
+            if (firebaseConfig.apiKey) {
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 isFirebaseReady = true;
@@ -93,7 +84,7 @@
             console.error("Firebase init failed:", e);
         }
 
-        const TRIP_DOC_ID = "okinawa_trip_2025"; // DB Document Name
+        const TRIP_DOC_ID = "okinawa_trip_2025"; 
 
         // --- Helper: Copy ---
         const copyToClipboard = (text) => {
@@ -129,19 +120,61 @@
             );
         };
 
-        // --- Default Data ---
-        const defaultItinerary = [
-            { id: "day1", date: "12/19", day: "Day 1", location: "晚班機 / 抵達", activities: [{ id: 'd1-1', time: "16:20", title: "桃園機場報到", type: "transport", address: "Taoyuan International Airport", tips: "請務必提前 2 小時抵達。", desc: "MM930 起飛時間為 18:20。", tags: ["護照"] }, { id: 'd1-2', time: "20:50", title: "抵達那霸機場", type: "transport", address: "Naha Airport", mapcode: "33 123 272*52", tips: "入境後前往國內線航廈轉乘單軌。", desc: "下機後請依照指示辦理入境手續。", tags: ["飛行模式"] }, { id: 'd1-3', time: "22:15", title: "Check-in 喜璃癒志 LCH", type: "hotel", address: "1-11-8 Izumizaki, Naha", mapcode: "33 126 505*52", tips: "備品需自備。樓下有 Lawson。", desc: "位於縣廳前站走路 3 分鐘。", tags: ["住宿"] }] },
-            { id: "day2", date: "12/20", day: "Day 2", location: "南部 / 浦添 / 北谷", activities: [{ id: 'd2-1', time: "09:00", title: "SKY RENT A CAR 取車", type: "transport", address: "2 Chome-6-16 Kume, Naha", mapcode: "33 156 344*86", tips: "請攜帶：台灣駕照 + 日文譯本 + 護照。", desc: "地址已更新為久米店。", tags: ["駕照正本"] }, { id: 'd2-2', time: "10:30", title: "平和祈念公園", type: "sightseeing", address: "614-1 Mabuni, Itoman", mapcode: "232 311 440*13", tips: "往南開，莊嚴遼闊。", desc: "適合稍微散步，感受海風。", tags: ["南部"] }, { id: 'd2-3', time: "12:00", title: "奧武島 (中本鮮魚天婦羅)", type: "food", address: "9 Tamagusuku, Nanjo", mapcode: "232 467 296*75", tips: "必吃：炸海藻 (Mozuku)、炸魚。", desc: "午餐就在這裡解決。", tags: ["必吃"] }, { id: 'd2-4', time: "14:00", title: "西來院 (達磨寺)", type: "sightseeing", address: "1 Chome-5-1 Shuriteracho", mapcode: "33 191 166*85", tips: "北上順路經過。", desc: "祈求這幾天自駕交通安全。", tags: ["祈福"] }, { id: 'd2-5', time: "15:30", title: "Workman Plus 浦添經塚", type: "shopping", address: "392 Kyozuka, Urasoe", mapcode: "33 255 609*82", tips: "高機能、低價格。", desc: "推薦：防水外套、機能露營用品。", tags: ["必逛"] }, { id: 'd2-6', time: "17:00", title: "AEON MALL Rycom", type: "shopping", address: "1 Rycom, Kitanakagusuku", mapcode: "33 530 406*45", tips: "沖繩最大商場。", desc: "晚餐前的小逛。", tags: ["雨備"] }, { id: 'd2-7', time: "18:30", title: "美國村 (聖誕燈飾)", type: "sightseeing", address: "Mihama, Chatan", mapcode: "33 525 382*47", tips: "充滿異國風情。", desc: "日落後整個園區會點燈。", tags: ["夜景"] }, { id: 'd2-8', time: "19:45", title: "琉球的牛 (北谷店)", type: "food", address: "51-1 2F Mihama, Chatan", mapcode: "33 526 450*63", tips: "已預約 19:45。", desc: "頂級燒肉體驗。", tags: ["預約確認"] }, { id: 'd2-9', time: "21:30", title: "Check-in Riyuka", type: "hotel", address: "6-25-13 Mizugama, Kadena", mapcode: "33 704 639*25", tips: "公寓式酒店。", desc: "位於嘉手納。", tags: ["住宿"] }] },
-            { id: "day3", date: "12/21", day: "Day 3", location: "中部 / 浦添 / 那霸", activities: [{ id: 'd3-1', time: "10:00", title: "普天滿宮 (鐘乳石洞)", type: "sightseeing", address: "1 Chome-27-10 Futenma", mapcode: "33 438 615*06", tips: "需至社務所登記。", desc: "本殿下方有神秘鐘乳石洞。", tags: ["必去"] }, { id: 'd3-2', time: "11:30", title: "高江洲そば", type: "food", address: "3 Chome-36-1 Isa", mapcode: "33 311 237*25", tips: "必點『湯豆腐沖繩麵』。", desc: "在地人推薦排隊名店。", tags: ["在地美食"] }, { id: 'd3-3', time: "12:30", title: "漫畫倉庫 浦添店", type: "shopping", address: "262 Shiroma, Urasoe", mapcode: "33 341 535*74", tips: "24小時二手尋寶。", desc: "小心逛到忘記時間！", tags: ["挖寶"] }, { id: 'd3-4', time: "14:30", title: "PARCO CITY", type: "shopping", address: "3 Chome-1-1 Irijima", mapcode: "33 308 899*17", tips: "海景無敵。", desc: "還車前最後採買。", tags: ["購物"] }, { id: 'd3-5', time: "17:30", title: "加油 & 還車 (SKY)", type: "transport", address: "2 Chome-6-16 Kume", mapcode: "33 156 344*86", tips: "務必加滿油。", desc: "還車後搭車回飯店。", tags: ["加油"] }, { id: 'd3-6', time: "18:30", title: "Check-in 喜璃癒志 LCH", type: "hotel", address: "1-11-8 Izumizaki", mapcode: "33 126 505*52", tips: "再次入住 LCH。", desc: "放行李。", tags: ["住宿"] }, { id: 'd3-7', time: "20:00", title: "Churasun6 (入場)", type: "sightseeing", address: "1-5-1 Matsuyama", mapcode: "33 157 265*82", tips: "20:30 開演。", desc: "已購票。", tags: ["夜生活"] }] },
-            { id: "day4", date: "12/22", day: "Day 4", location: "早班機 / 返台", activities: [{ id: 'd4-1', time: "06:00", title: "前往機場", type: "transport", address: "Naha Airport", tips: "建議搭乘計程車。", desc: "MM921 08:15 起飛。", tags: ["早起"] }, { id: 'd4-2', time: "08:15", title: "MM921 返台", type: "transport", address: "Naha Airport", tips: "最後免稅店衝刺。", desc: "預計 08:55 抵達桃園。", tags: ["回程"] }] }
+        // --- Real-time Flight Logic (Restored) ---
+        const flights = [
+            { code: "MM930", route: "TPE -> OKA", dep: "2025-12-19T18:20:00", arr: "2025-12-19T20:50:00", terminal: "T1", gate: "B1R", status: "scheduled" },
+            { code: "MM921", route: "OKA -> TPE", dep: "2025-12-22T08:15:00", arr: "2025-12-22T08:55:00", terminal: "Intl", gate: "--", status: "scheduled" }
         ];
 
-        const weatherData = {
-            "12/19": { temp: "21°C", icon: <Sun size={20} />, desc: "晴時多雲", color: "bg-gradient-to-br from-orange-400 to-amber-200 text-white" },
-            "12/20": { temp: "20°C", icon: <Wind size={20} />, desc: "微風涼爽", color: "bg-gradient-to-br from-blue-400 to-cyan-200 text-white" },
-            "12/21": { temp: "19°C", icon: <CloudRain size={20} />, desc: "偶有陣雨", color: "bg-gradient-to-br from-slate-400 to-slate-200 text-white" },
-            "12/22": { temp: "21°C", icon: <Sun size={20} />, desc: "晴朗", color: "bg-gradient-to-br from-orange-400 to-amber-200 text-white" },
+        const FlightWidget = ({ flight }) => {
+            const [status, setStatus] = useState("準時");
+            const [color, setColor] = useState("text-emerald-600 bg-emerald-50");
+            const [timeLeft, setTimeLeft] = useState("");
+
+            useEffect(() => {
+                const timer = setInterval(() => {
+                    const now = new Date();
+                    const depTime = new Date(flight.dep);
+                    const arrTime = new Date(flight.arr);
+                    const diffMs = depTime - now;
+
+                    if (now > arrTime) {
+                        setStatus("已抵達");
+                        setColor("text-stone-500 bg-stone-100");
+                        setTimeLeft("旅程結束");
+                    } else if (now > depTime) {
+                        setStatus("飛行中");
+                        setColor("text-blue-600 bg-blue-50");
+                        setTimeLeft("航行中");
+                    } else if (diffMs < 30 * 60 * 1000 && diffMs > 0) {
+                        setStatus("登機中");
+                        setColor("text-rose-600 bg-rose-50 animate-pulse");
+                        setTimeLeft(`起飛前 ${Math.floor(diffMs / 60000)} 分`);
+                    } else {
+                        setStatus("準時");
+                        setColor("text-emerald-600 bg-emerald-50");
+                        const hours = Math.floor(diffMs / (1000 * 60 * 60));
+                        const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                        if (hours > 24) setTimeLeft(`${Math.floor(hours/24)}天後起飛`);
+                        else setTimeLeft(`${hours}時${minutes}分後起飛`);
+                    }
+                }, 1000);
+                return () => clearInterval(timer);
+            }, [flight]);
+
+            return (
+                <div className="bg-white rounded-xl p-4 border border-stone-100 shadow-sm mb-3">
+                    <div className="flex justify-between items-start mb-3">
+                        <div className="flex items-center gap-2"><Plane size={16} className="text-stone-400" /><span className="text-lg font-black tracking-wider text-stone-800">{flight.code}</span></div>
+                        <div className={`px-2 py-0.5 rounded text-[10px] font-bold ${color}`}>{status}</div>
+                    </div>
+                    <div className="flex justify-between items-center text-stone-800">
+                        <div><span className="text-2xl font-bold block leading-none">{flight.dep.split('T')[1].slice(0,5)}</span><span className="text-[10px] text-stone-400 font-bold">{flight.route.split('->')[0].trim()}</span></div>
+                        <div className="flex-1 px-4 flex flex-col items-center"><span className="text-[10px] text-stone-400 mb-1">{timeLeft}</span><div className="w-full h-px bg-stone-200 relative"><div className="absolute right-0 -top-1 w-2 h-2 rounded-full bg-stone-300"></div><div className="absolute left-0 -top-1 w-2 h-2 rounded-full bg-stone-300"></div></div></div>
+                        <div className="text-right"><span className="text-2xl font-bold block leading-none">{flight.arr.split('T')[1].slice(0,5)}</span><span className="text-[10px] text-stone-400 font-bold">{flight.route.split('->')[1].trim()}</span></div>
+                    </div>
+                </div>
+            );
         };
 
         // --- Weather Widget ---
@@ -157,6 +190,34 @@
                 </div>
             </div>
         );
+
+        // --- Traffic Card (Restored) ---
+        const TrafficCard = () => (
+            <div className="bg-white rounded-xl p-4 border border-stone-100 shadow-sm mb-4">
+                <h4 className="font-bold text-stone-700 flex items-center gap-2 mb-3 text-sm"><Car size={16} className="text-amber-500" /> 沖繩路況攻略</h4>
+                <div className="space-y-3 text-xs text-stone-600">
+                    <div className="flex items-start gap-2 bg-stone-50 p-2 rounded"><span className="bg-red-100 text-red-600 px-1.5 font-bold rounded shrink-0">塞車</span><p><span className="font-bold block text-stone-800">國道 58 號線</span>平日通勤時段 (7:30-9:00, 17:00-19:00) 嚴重壅塞。</p></div>
+                    <div className="flex items-start gap-2 bg-stone-50 p-2 rounded"><span className="bg-orange-100 text-orange-600 px-1.5 font-bold rounded shrink-0">管制</span><p><span className="font-bold block text-stone-800">國際通 (步行者天國)</span>每週日 12:00-18:00 實施封街，車輛禁止進入。</p></div>
+                    <div className="flex items-start gap-2 bg-stone-50 p-2 rounded"><span className="bg-blue-100 text-blue-600 px-1.5 font-bold rounded shrink-0">專用</span><p><span className="font-bold block text-stone-800">公車專用道 (Bus Lane)</span>早晚尖峰特定路段最外側車道僅限公車，誤闖會被罰款。</p></div>
+                </div>
+                <a href="https://www.google.com/maps/@26.2124,127.6809,11z/data=!5m1!1e1" target="_blank" className="block mt-3 text-center text-indigo-600 text-xs font-bold border-t border-stone-100 pt-2 hover:bg-stone-50 rounded">開啟 Google Maps 即時路況</a>
+            </div>
+        );
+
+        // --- Default Data ---
+        const defaultItinerary = [
+            { id: "day1", date: "12/19", day: "Day 1", location: "晚班機 / 抵達", activities: [{ id: 'd1-1', time: "16:20", title: "桃園機場報到", type: "transport", address: "Taoyuan International Airport", tips: "請務必提前 2 小時抵達。", desc: "MM930 起飛時間為 18:20。", tags: ["護照"] }, { id: 'd1-2', time: "20:50", title: "抵達那霸機場", type: "transport", address: "Naha Airport", mapcode: "33 123 272*52", tips: "入境後前往國內線航廈轉乘單軌。", desc: "下機後請依照指示辦理入境手續。", tags: ["飛行模式"] }, { id: 'd1-3', time: "22:15", title: "Check-in 喜璃癒志 LCH", type: "hotel", address: "1-11-8 Izumizaki, Naha", mapcode: "33 126 505*52", tips: "備品需自備。樓下有 Lawson。", desc: "位於縣廳前站走路 3 分鐘。", tags: ["住宿"] }] },
+            { id: "day2", date: "12/20", day: "Day 2", location: "南部 / 浦添 / 北谷", activities: [{ id: 'd2-1', time: "09:00", title: "SKY RENT A CAR 取車", type: "transport", address: "2 Chome-6-16 Kume, Naha", mapcode: "33 156 344*86", tips: "請攜帶：台灣駕照 + 日文譯本 + 護照。", desc: "地址已更新為久米店。", tags: ["駕照正本"] }, { id: 'd2-2', time: "10:30", title: "平和祈念公園", type: "sightseeing", address: "614-1 Mabuni, Itoman", mapcode: "232 311 440*13", tips: "往南開，莊嚴遼闊。", desc: "適合稍微散步，感受海風。", tags: ["南部"] }, { id: 'd2-3', time: "12:00", title: "奧武島 (中本鮮魚天婦羅)", type: "food", address: "9 Tamagusuku, Nanjo", mapcode: "232 467 296*75", tips: "必吃：炸海藻 (Mozuku)、炸魚。", desc: "午餐就在這裡解決。", tags: ["必吃"] }, { id: 'd2-4', time: "14:00", title: "西來院 (達磨寺)", type: "sightseeing", address: "1 Chome-5-1 Shuriteracho", mapcode: "33 191 166*85", tips: "北上順路經過。", desc: "祈求這幾天自駕交通安全。", tags: ["祈福"] }, { id: 'd2-5', time: "15:30", title: "Workman Plus 浦添經塚", type: "shopping", address: "392 Kyozuka, Urasoe", mapcode: "33 255 609*82", tips: "高機能、低價格。", desc: "推薦：防水外套、機能露營用品。", tags: ["必逛"] }, { id: 'd2-6', time: "17:00", title: "AEON MALL Rycom", type: "shopping", address: "1 Rycom, Kitanakagusuku", mapcode: "33 530 406*45", tips: "沖繩最大商場。", desc: "晚餐前的小逛。", tags: ["雨備"] }, { id: 'd2-7', time: "18:30", title: "美國村 (聖誕燈飾)", type: "sightseeing", address: "Mihama, Chatan", mapcode: "33 525 382*47", tips: "充滿異國風情。", desc: "日落後整個園區會點燈。", tags: ["夜景"] }, { id: 'd2-8', time: "19:45", title: "琉球的牛 (北谷店)", type: "food", address: "51-1 2F Mihama, Chatan", mapcode: "33 526 450*63", tips: "已預約 19:45。", desc: "頂級燒肉體驗。", tags: ["預約確認"] }, { id: 'd2-9', time: "21:30", title: "Check-in Riyuka", type: "hotel", address: "6-25-13 Mizugama, Kadena", mapcode: "33 704 639*25", tips: "公寓式酒店。", desc: "位於嘉手納。", tags: ["住宿"] }] },
+            { id: "day3", date: "12/21", day: "Day 3", location: "中部 / 浦添 / 那霸", activities: [{ id: 'd3-1', time: "10:00", title: "普天滿宮 (鐘乳石洞)", type: "sightseeing", address: "1 Chome-27-10 Futenma", mapcode: "33 438 615*06", tips: "需至社務所登記。", desc: "本殿下方有神秘鐘乳石洞。", tags: ["必去"] }, { id: 'd3-2', time: "11:30", title: "高江洲そば", type: "food", address: "3 Chome-36-1 Isa", mapcode: "33 311 237*25", tips: "必點『湯豆腐沖繩麵』。", desc: "在地人推薦排隊名店。", tags: ["在地美食"] }, { id: 'd3-3', time: "12:30", title: "漫畫倉庫 浦添店", type: "shopping", address: "262 Shiroma, Urasoe", mapcode: "33 341 535*74", tips: "24小時二手尋寶。", desc: "小心逛到忘記時間！", tags: ["挖寶"] }, { id: 'd3-4', time: "14:30", title: "PARCO CITY", type: "shopping", address: "3 Chome-1-1 Irijima", mapcode: "33 308 899*17", tips: "海景無敵。", desc: "還車前最後採買。", tags: ["購物"] }, { id: 'd3-5', time: "17:30", title: "加油 & 還車 (SKY)", type: "transport", address: "2 Chome-6-16 Kume", mapcode: "33 156 344*86", tips: "務必加滿油。", desc: "還車後搭車回飯店。", tags: ["加油"] }, { id: 'd3-6', time: "18:30", title: "Check-in 喜璃癒志 LCH", type: "hotel", address: "1-11-8 Izumizaki", mapcode: "33 126 505*52", tips: "再次入住 LCH。", desc: "放行李。", tags: ["住宿"] }, { id: 'd3-7', time: "20:00", title: "Churasun6 (入場)", type: "sightseeing", address: "1-5-1 Matsuyama", mapcode: "33 157 265*82", tips: "20:30 開演。", desc: "已購票。", tags: ["夜生活"] }] },
+            { id: "day4", date: "12/22", day: "Day 4", location: "早班機 / 返台", activities: [{ id: 'd4-1', time: "06:00", title: "前往機場", type: "transport", address: "Naha Airport", tips: "建議搭乘計程車。", desc: "MM921 08:15 起飛。", tags: ["早起"] }, { id: 'd4-2', time: "08:15", title: "MM921 返台", type: "transport", address: "Naha Airport", tips: "最後免稅店衝刺。", desc: "預計 08:55 抵達桃園。", tags: ["回程"] }] }
+        ];
+
+        const weatherData = {
+            "12/19": { temp: "21°C", icon: <Sun size={20} />, desc: "晴時多雲", color: "bg-gradient-to-br from-orange-400 to-amber-200 text-white" },
+            "12/20": { temp: "20°C", icon: <Wind size={20} />, desc: "微風涼爽", color: "bg-gradient-to-br from-blue-400 to-cyan-200 text-white" },
+            "12/21": { temp: "19°C", icon: <CloudRain size={20} />, desc: "偶有陣雨", color: "bg-gradient-to-br from-slate-400 to-slate-200 text-white" },
+            "12/22": { temp: "21°C", icon: <Sun size={20} />, desc: "晴朗", color: "bg-gradient-to-br from-orange-400 to-amber-200 text-white" },
+        };
 
         // --- Components ---
         const ViewActivityModal = ({ activity, onClose }) => {
@@ -238,7 +299,6 @@
             // Sync with Firebase
             useEffect(() => {
                 if (!isFirebaseReady) {
-                    // Fallback to local storage if no config
                     console.warn("No Firebase Config found. Using LocalStorage.");
                     const saved = localStorage.getItem('okinawa_itinerary_offline');
                     if (saved) setItinerary(JSON.parse(saved));
@@ -246,7 +306,6 @@
                     return;
                 }
 
-                // Real-time listener
                 const unsub = onSnapshot(doc(db, "trips", TRIP_DOC_ID), (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data();
@@ -255,7 +314,6 @@
                         setPersonalHistory(data.personalHistory || []);
                         setIsOnline(true);
                     } else {
-                        // First time: upload default
                         setDoc(doc(db, "trips", TRIP_DOC_ID), {
                             itinerary: defaultItinerary,
                             poolHistory: [],
@@ -271,7 +329,6 @@
                 return () => unsub();
             }, []);
 
-            // Helper to update Firebase
             const updateCloud = async (newItinerary, newPool, newPersonal) => {
                 if (isFirebaseReady) {
                     try {
@@ -285,7 +342,6 @@
                         alert("儲存失敗，請檢查網路或權限");
                     }
                 } else {
-                    // Fallback Local Save
                     if (newItinerary) {
                         setItinerary(newItinerary);
                         localStorage.setItem('okinawa_itinerary_offline', JSON.stringify(newItinerary));
@@ -295,8 +351,6 @@
 
             const handleReset = () => {
                 if (window.confirm('重置將恢復預設行程並清空所有修改。確定？')) {
-                    updateCloud(defaultItinerary, [], []); // Also clear budget? Maybe just itinerary. Let's reset itinerary only for safety.
-                    // Actually user probably wants to reset ITINERARY only
                     updateCloud(defaultItinerary); 
                     setIsEditMode(false);
                 }
@@ -408,7 +462,26 @@
                         {activeTab === 'info' && (
                             <div className="space-y-6 animate-fade-in">
                                 <WeatherWidget />
-                                <div className="bg-white rounded-xl p-4 border border-stone-100 shadow-sm"><h4 className="font-bold text-stone-700 flex items-center gap-2 mb-3 text-sm"><Car size={16} className="text-amber-500" /> 沖繩路況攻略</h4><div className="space-y-3 text-xs text-stone-600"><div className="flex items-start gap-2 bg-stone-50 p-2 rounded"><span className="bg-red-100 text-red-600 px-1.5 font-bold rounded shrink-0">塞車</span><p><span className="font-bold block text-stone-800">國道 58 號線</span>平日通勤時段 (7:30-9:00, 17:00-19:00) 嚴重壅塞。</p></div><div className="flex items-start gap-2 bg-stone-50 p-2 rounded"><span className="bg-orange-100 text-orange-600 px-1.5 font-bold rounded shrink-0">管制</span><p><span className="font-bold block text-stone-800">國際通 (週日)</span>12:00-18:00 步行者天國，車輛禁入。</p></div></div><a href="https://www.google.com/maps/@26.2124,127.6809,11z/data=!5m1!1e1" target="_blank" className="block mt-3 text-center text-indigo-600 text-xs font-bold border-t border-stone-100 pt-2">開啟 Google Maps 即時路況</a></div>
+                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                    <div className="bg-white p-4 rounded-xl shadow-sm border border-stone-100 flex flex-col justify-center">
+                                        <p className="text-stone-400 text-xs font-bold uppercase mb-1">Exchange Rate</p>
+                                        <div className="flex items-end gap-1"><span className="text-3xl font-black text-stone-800">0.22</span><span className="text-xs text-stone-500 font-medium mb-1.5">TWD/JPY</span></div>
+                                        <p className="text-[10px] text-stone-400 mt-1">*僅供參考</p>
+                                    </div>
+                                    <div className="bg-stone-800 p-4 rounded-xl shadow-sm flex flex-col justify-center items-center text-white">
+                                        <Clock size={24} className="mb-2 text-stone-400" />
+                                        <span className="text-xs font-bold">沖繩時間</span>
+                                        <span className="text-2xl font-black">{new Date().toLocaleTimeString('en-US', {timeZone: 'Asia/Tokyo', hour: '2-digit', minute:'2-digit', hour12: false})}</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h3 className="font-bold text-stone-400 text-xs uppercase tracking-widest mb-3 ml-1">Live Flights</h3>
+                                    {flights.map(f => <FlightWidget key={f.code} flight={f} />)}
+                                </div>
+
+                                <TrafficCard />
+
                                 <div className="bg-red-50 p-5 rounded-2xl border border-red-100"><h3 className="font-bold text-red-800 mb-3 flex items-center gap-2 text-sm uppercase"><Phone size={16} /> Emergency</h3><div className="grid grid-cols-2 gap-2"><div className="bg-white/60 p-2 rounded"><span className="text-[10px] text-red-400 font-bold block">警察</span>110</div><div className="bg-white/60 p-2 rounded"><span className="text-[10px] text-red-400 font-bold block">救護</span>119</div><div className="bg-white/60 p-2 rounded"><span className="text-[10px] text-red-400 font-bold block">租車</span>098-858-0678</div><div className="bg-white/60 p-2 rounded"><span className="text-[10px] text-red-400 font-bold block">外交部</span>080-1009-2436</div></div></div>
                             </div>
                         )}
